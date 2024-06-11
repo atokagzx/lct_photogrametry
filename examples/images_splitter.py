@@ -13,16 +13,15 @@ import matplotlib.pyplot as plt
 import lct_solution as lct
 
 
-
 if __name__ == "__main__":
-    tileset_filename = "Tile_p3646_p720_glb/tileset_box_b3dm_crop.json"
+    tileset_filename = "tileset_box_b3dm_crop.json"
     root_dir = "Tile_p3646_p720_glb"
     save_dir = Path("out_img")
     os.makedirs(save_dir, exist_ok=True)
-    tiles = lct.TilesLoader(tileset_filename, root_dir)
+    tiles = lct.TilesLoader(root_dir, tileset_filename)
     meshes = tiles.models.values()
     splitted = lct.split_images(tiles, 
-                                (8, 8), 
+                                (4, 4), 
                                 camera_step=50, 
                                 image_size=1000, 
                                 to_pillow=True, 

@@ -62,9 +62,10 @@ def split_images(tiles: TilesLoader,
                 color = PIL.Image.fromarray(color, "RGB")
                 depth = PIL.Image.fromarray((depth * 255).astype(np.uint8), "L")
             renderer.delete()
-            # save as image
+            # camera is at origin' coordinates
+            # we need to transform it to world coordinates
             transform = {
-                "tf": (tiles.origin_translation @ tiles.origin_rotation @ camera_tf).tolist(),
+                "tf": (np.linalg.inv(np.linalg.inv(tiles.origin_translation) @ np.linalg.inv(tiles.origin_rotation)) @ camera_tf).tolist(),
                 "step_m": camera_step,
                 "image_size": image_size,
                 "camera_dst": camera_dst,

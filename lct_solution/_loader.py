@@ -35,7 +35,7 @@ class TilesLoader:
         self._origin_translation = None
         self._find_corner()
         self._loaded_models = {}
-        for tile in tqdm.tqdm(self._tiles, desc="Loading .glb models"):
+        for tile in tqdm.tqdm(self._tiles, desc="Loading .glb models", unit="tile", leave=False):
             if tile.uri not in self._loaded_models:
                 try:
                     trimeshes = self.load_model(root_dir / tile.uri)
@@ -44,18 +44,18 @@ class TilesLoader:
                     continue
                 else:
                     print(f"Succesfully loaded {tile.uri}")
-                if self._origin_translation is None:
-                    print("Warning: origin translation is not set")
-                    origin_translation = np.eye(4)
-                    origin_translation[:3, 3] = tile.box[:3]
-                    self._origin_translation = origin_translation
+                # if self._origin_translation is None:
+                #     print("Warning: origin translation is not set")
+                #     origin_translation = np.eye(4)
+                #     origin_translation[:3, 3] = tile.box[:3]
+                #     self._origin_translation = origin_translation
                 for mesh in trimeshes:
                     mesh.apply_transform(transform_mtx)
                     box_translation = np.eye(4)
                     box_translation[:3, 3] = tile.box[:3]
-                    mesh.apply_transform(np.linalg.inv(self.origin_rotation) @ np.linalg.inv(self.origin_translation) @ box_translation)
+                    mesh.apply_transform(np.linalg.inv(self.origin_translation) @ np.linalg.inv(self.origin_rotation)  @ box_translation)
                     tf = tm.creation.axis(origin_size=1)
-                    tf.apply_transform(np.linalg.inv(self.origin_rotation) @ np.linalg.inv(self.origin_translation) @ box_translation)
+                    tf.apply_transform(np.linalg.inv(self.origin_translation) @ np.linalg.inv(self.origin_rotation)  @ box_translation)
                     self._tfs.append(tf)
                 self._loaded_models[tile.uri] = trimeshes
                 
@@ -85,10 +85,13 @@ class TilesLoader:
         min_x = min_y = min_z = float('inf')
         max_x = max_y = max_z = float('-inf')
         print("rot: ", self._origin_rotation)
+        # scene = tm.Scene()
         for tile in self._tiles:
             box_translation = np.eye(4)
             box_translation[:3, 3] = tile.box[:3]
-            box_translation = self._origin_rotation @ box_translation
+            # box_translation = self._origin_rotation @ box_translation
+            box_translation = np.linalg.inv(self.origin_rotation) @ box_translation
+            # scene.add_geometry(tm.creation.axis(origin_size=1, transform=box_translation))
             if box_translation[0, 3] < min_x:
                 min_x = box_translation[0, 3]
             if box_translation[1, 3] < min_y:
@@ -103,10 +106,19 @@ class TilesLoader:
                 max_z = box_translation[2, 3]
         origin_translation = np.eye(4)
         origin_translation[:3, 3] = [min_x, min_y, min_z]
-        origin_translation = np.linalg.inv(self._origin_rotation) @ origin_translation
-        self._origin_translation = np.eye(4)
-        self._origin_translation[:3, 3] = origin_translation[:3, 3]
-        
+        self._origin_translation = origin_translation
+        # scene.add_geometry(tm.creation.axis(origin_size=5))
+        # print("origin translation: ", self._origin_translation)
+        # for tile in self._tiles:
+        #     box_translation = np.eye(4)
+        #     box_translation[:3, 3] = tile.box[:3]
+        #     # box_translation = np.linalg.inv(self.origin_rotation) @ np.linalg.inv(self._origin_translation) @ box_translation
+        #     box_translation = np.linalg.inv(self._origin_translation) @ np.linalg.inv(self.origin_rotation) @ box_translation
+        #     print("box translation: ", box_translation)
+        #     scene.add_geometry(tm.creation.axis(origin_size=1, transform=box_translation))
+        # # scene.apply_scale(0.1)
+        # scene.show()
+        # exit()
 
     @staticmethod
     def load_model(path: pathlib.Path):

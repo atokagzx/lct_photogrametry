@@ -18,7 +18,6 @@ if __name__ == "__main__":
     image = cv2.imread(image_path)
     with open(metadata_path, "r") as f:
         metadata = json.load(f)
-        
     cv2.namedWindow("image", cv2.WINDOW_NORMAL)
     cv2.setMouseCallback("image", mouse_callback, metadata)
     while True:
