@@ -170,3 +170,4 @@ class TilesLoader:
         coors_tf[:3, 3] = pos
         coords_tf = np.linalg.inv(self.origin_rotation) @ np.linalg.inv(self.origin_translation) @ coors_tf @ self.origin_rotation
         return coords_tf
+    
