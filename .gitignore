@@ -1,0 +1,13 @@
+~*
+*~
+*.pyc
+*.zip
+*.egg-info
+.DS_Store
+.vscode/
+*.glb
+*.gltf
+*.png
+*.jpg
+*.jpeg
+*.json
