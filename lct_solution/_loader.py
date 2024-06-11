@@ -14,7 +14,7 @@ from trimesh import creation, transformations
 import pyrender
 import matplotlib.pyplot as plt
 import tqdm
-
+import glob
 from ._datatypes import (Tile, 
                          transform_mtx)
 from ._utils import compute_origin
@@ -22,14 +22,14 @@ from ._geography import cartesian_to_wsg84
 
 
 class TilesLoader:
-    def __init__(self, tileset_filename, root_dir):
+    def __init__(self, root_dir, root_tileset_filename):
         self._origin_translation = None
         root_dir = pathlib.Path(root_dir)
-        with open(tileset_filename) as f:
-            tileset = json.load(f)
+        self._root_dir = root_dir   
         self._tiles = []
-        root = tileset['root']
-        self._get_child(root, 0)
+        with open(root_dir / root_tileset_filename) as f:
+            root_tileset = json.load(f)
+        self._get_child(root_tileset['root'], 0)
         self._tfs = []
         self._origin_rotation = compute_origin(self._tiles)
         self._origin_translation = None
@@ -37,7 +37,13 @@ class TilesLoader:
         self._loaded_models = {}
         for tile in tqdm.tqdm(self._tiles, desc="Loading .glb models"):
             if tile.uri not in self._loaded_models:
-                trimeshes = self.load_model(root_dir / tile.uri)
+                try:
+                    trimeshes = self.load_model(root_dir / tile.uri)
+                except (pyassimp.errors.AssimpError, FileNotFoundError) as e:
+                    print(f"Error loading {tile.uri}: {e}")
+                    continue
+                else:
+                    print(f"Succesfully loaded {tile.uri}")
                 if self._origin_translation is None:
                     print("Warning: origin translation is not set")
                     origin_translation = np.eye(4)
@@ -58,6 +64,13 @@ class TilesLoader:
         if 'children' not in a:
             if 'content' in a:
                 uri = a['content']['uri']
+                if uri.endswith('.json'):
+                    include_file = self._root_dir / uri
+                    print(f"Loading additional tileset: {include_file}")
+                    with open(include_file) as f:
+                        a = json.load(f)
+                    self._get_child(a['root'], level + 1)
+                    return
                 bounding_volume = np.array(a['boundingVolume']['box'])
                 geometric_error = a['geometricError']
                 tile = Tile(uri, bounding_volume, geometric_error)
@@ -68,10 +81,11 @@ class TilesLoader:
 
 
     def _find_corner(self):
+        # TODO: fix this
         min_x = min_y = min_z = float('inf')
         max_x = max_y = max_z = float('-inf')
         print("rot: ", self._origin_rotation)
-        for tile in self._tiles[:5]:
+        for tile in self._tiles:
             box_translation = np.eye(4)
             box_translation[:3, 3] = tile.box[:3]
             box_translation = self._origin_rotation @ box_translation
@@ -164,7 +178,9 @@ class TilesLoader:
         return meshes
     
 
-    def cartesian_to_tf(self, coords):
+    def cartesian_to_tf(self, coords: list):
+        if len(coords) != 3:
+            raise ValueError(f"Expected 3 coordinates, got {coords}")
         pos = cartesian_to_wsg84(*coords)
         coors_tf = np.eye(4)
         coors_tf[:3, 3] = pos
