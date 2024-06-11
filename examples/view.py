@@ -14,7 +14,6 @@ if __name__ == "__main__":
     meshes = tiles.models.values()
     scene = tm.Scene(meshes)
     scene.add_geometry(tm.creation.axis(origin_size=5))
-    scene.add_geometry(tm.creation.axis(origin_size=5, transform=tiles.origin_rotation))
     for tf in tiles._tfs:
-        scene.add_geometry(tm.creation.axis(origin_size=1, transform=tf))
+        scene.add_geometry(tf)
     scene.show()

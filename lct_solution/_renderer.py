@@ -17,7 +17,8 @@ def split_images(tiles: TilesLoader,
                 image_size: int = 1000,
                 light_intensity: float = 10.0,
                 to_pillow: bool = False,
-                draw_axis: bool = False):
+                draw_axis: bool = False,
+                camera_dst: float = 100):
     '''
     Split images into count * count grid
     @param tiles: instance of TilesLoader
@@ -26,18 +27,19 @@ def split_images(tiles: TilesLoader,
     @param image_size: size of the image (pixels)
     @param light_intensity: intensity of the light
     @param draw_axis: draw axis on the image
+    @param camera_dst: distance from the camera to the origin
     @return: list of tuples (rgb, depth, transform)
     '''
     splitted = []
     for x in tqdm.tqdm(range(count[0]), desc="Generating images in x"):
-        for y in tqdm.tqdm(range(count[1]), desc="Generating images in y"):
+        for y in tqdm.tqdm(range(count[1]), desc="Generating images in y", leave=False):
             scene = pyrender.Scene()
             for mesh in tiles._loaded_models.values():
                 mesh = pyrender.Mesh.from_trimesh(mesh, smooth=False)
                 scene.add(mesh)
             camera_tf = np.eye(4)
-            camera_tf[:3, 3] = [camera_step / 2 + x * camera_step, camera_step / 2 + y * camera_step, 100]
-            camera_tf = np.dot(tiles.origin_rotation, camera_tf)
+            camera_tf[:3, 3] = [camera_step / 2 + x * camera_step, camera_step / 2 + y * camera_step, camera_dst]
+            # camera_tf = np.dot(tiles.origin_rotation, camera_tf)
             camera_axis_frame = tm.creation.axis(origin_size=5, transform=camera_tf)
             scene.add(pyrender.Mesh.from_trimesh(camera_axis_frame, smooth=False))
             
@@ -62,9 +64,10 @@ def split_images(tiles: TilesLoader,
             renderer.delete()
             # save as image
             transform = {
-                "tf": (tiles.origin_translation @ camera_tf).tolist(),
+                "tf": (tiles.origin_translation @ tiles.origin_rotation @ camera_tf).tolist(),
                 "step_m": camera_step,
-                "image_size": image_size
+                "image_size": image_size,
+                "camera_dst": camera_dst,
             }
             splitted.append((color, depth, transform))
     return splitted

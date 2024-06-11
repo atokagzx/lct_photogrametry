@@ -22,7 +22,7 @@ if __name__ == "__main__":
     tiles = lct.TilesLoader(tileset_filename, root_dir)
     meshes = tiles.models.values()
     splitted = lct.split_images(tiles, 
-                                (2, 2), 
+                                (8, 8), 
                                 camera_step=50, 
                                 image_size=1000, 
                                 to_pillow=True, 

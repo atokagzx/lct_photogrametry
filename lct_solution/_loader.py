@@ -18,6 +18,8 @@ import tqdm
 from ._datatypes import (Tile, 
                          transform_mtx)
 from ._utils import compute_origin
+from ._geography import cartesian_to_wsg84
+
 
 class TilesLoader:
     def __init__(self, tileset_filename, root_dir):
@@ -45,8 +47,10 @@ class TilesLoader:
                     mesh.apply_transform(transform_mtx)
                     box_translation = np.eye(4)
                     box_translation[:3, 3] = tile.box[:3]
-                    mesh.apply_transform(np.linalg.inv(self._origin_translation) @ box_translation)
-                    self._tfs.append(np.linalg.inv(self._origin_translation) @ box_translation)
+                    mesh.apply_transform(np.linalg.inv(self.origin_rotation) @ np.linalg.inv(self.origin_translation) @ box_translation)
+                    tf = tm.creation.axis(origin_size=1)
+                    tf.apply_transform(np.linalg.inv(self.origin_rotation) @ np.linalg.inv(self.origin_translation) @ box_translation)
+                    self._tfs.append(tf)
                 self._loaded_models[tile.uri] = trimeshes
                 
     
@@ -158,3 +162,11 @@ class TilesLoader:
                 mesh.apply_transform(tm.transformations.translation_matrix(tile.box[:3] - origin))
                 meshes.append(mesh)
         return meshes
+    
+
+    def cartesian_to_tf(self, coords):
+        pos = cartesian_to_wsg84(*coords)
+        coors_tf = np.eye(4)
+        coors_tf[:3, 3] = pos
+        coords_tf = np.linalg.inv(self.origin_rotation) @ np.linalg.inv(self.origin_translation) @ coors_tf @ self.origin_rotation
+        return coords_tf
