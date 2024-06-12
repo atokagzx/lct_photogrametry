@@ -3,10 +3,12 @@
 import trimesh as tm
 import open3d as o3d
 import numpy as np
+import logging
 import lct_solution as lct
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     tileset_filename = "tileset_box_b3dm_crop.json"
     root_dir = "Tile_p3646_p720_glb"
     tiles = lct.TilesLoader(root_dir, tileset_filename)

@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 
 import json
+import logging
 import lct_solution as lct
 import cv2
 
 
 def mouse_callback(event, x, y, flags, param):
+    _logger = logging.getLogger("mouse_callback")
     if event == cv2.EVENT_LBUTTONDOWN:
         tf, coords = lct.to_world_dict((x, y), param)
-        print(*coords)
+        _logger.info(f"Mouse click at {x}, {y}")
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     image_path = "out_img/rgb_0.png"
     metadata_path = "out_img/transform_0.json"
     

@@ -1,5 +1,4 @@
 import pyassimp
-import open3d as o3d
 import trimesh as tm
 import numpy as np
 import PIL
@@ -9,20 +8,20 @@ import json
 from gltflib.gltf import GLTF
 from .glb import glb_to_pillow
 import json
-from dataclasses import dataclass
-from trimesh import creation, transformations
-import pyrender
 import matplotlib.pyplot as plt
 import tqdm
 import glob
+import logging
 from ._datatypes import (Tile, 
                          transform_mtx)
 from ._utils import compute_origin
-from ._geography import cartesian_to_wsg84
+from ._geography import (cartesian_to_wsg84,
+                            wsg84_to_cartesian)
 
 
 class TilesLoader:
     def __init__(self, root_dir, root_tileset_filename):
+        self._logger = logging.getLogger("tiles_loader")
         self._origin_translation = None
         root_dir = pathlib.Path(root_dir)
         self._root_dir = root_dir   
@@ -32,21 +31,17 @@ class TilesLoader:
         self._get_child(root_tileset['root'], 0)
         self._tfs = []
         self._origin_rotation = compute_origin(self._tiles)
-        self._origin_translation = None
+        self._logger.info(f"origin rotation: {self._origin_rotation}")
         self._find_corner()
+        self._logger.info(f"origin translation: {self._origin_translation}")
         self._loaded_models = {}
         for tile in tqdm.tqdm(self._tiles, desc="Loading .glb models", unit="tile", leave=True):
             if tile.uri not in self._loaded_models:
                 try:
                     trimeshes = self.load_model(root_dir / tile.uri)
                 except (pyassimp.errors.AssimpError, FileNotFoundError) as e:
-                    print(f"Error loading {tile.uri}: {e}")
+                    self._logger.exception(f"error loading tile {tile.uri}")
                     continue
-                # if self._origin_translation is None:
-                #     print("Warning: origin translation is not set")
-                #     origin_translation = np.eye(4)
-                #     origin_translation[:3, 3] = tile.box[:3]
-                #     self._origin_translation = origin_translation
                 for mesh in trimeshes:
                     mesh.apply_transform(transform_mtx)
                     box_translation = np.eye(4)
@@ -56,45 +51,29 @@ class TilesLoader:
                     tf.apply_transform(np.linalg.inv(self.origin_translation) @ np.linalg.inv(self.origin_rotation)  @ box_translation)
                     self._tfs.append(tf)
                 self._loaded_models[tile.uri] = trimeshes
-                
-    
+
+
     def _get_child(self, a, level):
-        if 'children' not in a:
-            if 'content' in a:
-                uri = a['content']['uri']
-                bounding_volume = np.array(a['boundingVolume']['box'])
-                geometric_error = a['geometricError']
-                tile = Tile(uri, bounding_volume, geometric_error)
-                self._tiles.append(tile)
-            return
-        for i in a['children']:
-            self._get_child(i, level + 1)
+        if 'content' in a:
+            uri = a['content']['uri']
+            if uri.endswith('.json'):
+                include_file = self._root_dir / uri
+                self._logger.info(f"loading additional tileset: {include_file}")
+                with open(include_file) as f:
+                    a = json.load(f)
+                self._get_child(a['root'], level + 1)
+            else:
+                if 'children' not in a:
+                    bounding_volume = np.array(a['boundingVolume']['box'])
+                    geometric_error = a['geometricError']
+                    tile = Tile(uri, bounding_volume, geometric_error)
+                    self._tiles.append(tile)
+        if 'children' in a:
+            for i in a['children']:
+                self._get_child(i, level + 1)
 
-
-
-
-
-    # def _get_child(self, a, level):
-    #     if 'content' in a:
-    #         uri = a['content']['uri']
-    #         if uri.endswith('.json'):
-    #             include_file = self._root_dir / uri
-    #             print(f"Loading additional tileset: {include_file}")
-    #             with open(include_file) as f:
-    #                 a = json.load(f)
-    #             self._get_child(a['root'], level + 1)
-    #         else:
-    #             if 'children' not in a:
-    #                 bounding_volume = np.array(a['boundingVolume']['box'])
-    #                 geometric_error = a['geometricError']
-    #                 tile = Tile(uri, bounding_volume, geometric_error)
-    #                 self._tiles.append(tile)
-    #     if 'children' in a:
-    #         for i in a['children']:
-    #             self._get_child(i, level + 1)
 
     def _find_corner(self):
-        # TODO: fix this
         min_x = min_y = min_z = float('inf')
         max_x = max_y = max_z = float('-inf')
         # scene = tm.Scene()
@@ -119,18 +98,9 @@ class TilesLoader:
         origin_translation = np.eye(4)
         origin_translation[:3, 3] = [min_x, min_y, min_z]
         self._origin_translation = origin_translation
-        # scene.add_geometry(tm.creation.axis(origin_size=5))
-        # print("origin translation: ", self._origin_translation)
-        # for tile in self._tiles:
-        #     box_translation = np.eye(4)
-        #     box_translation[:3, 3] = tile.box[:3]
-        #     # box_translation = np.linalg.inv(self.origin_rotation) @ np.linalg.inv(self._origin_translation) @ box_translation
-        #     box_translation = np.linalg.inv(self._origin_translation) @ np.linalg.inv(self.origin_rotation) @ box_translation
-        #     print("box translation: ", box_translation)
-        #     scene.add_geometry(tm.creation.axis(origin_size=1, transform=box_translation))
-        # # scene.apply_scale(0.1)
-        # scene.show()
-        # exit()
+        self._min_height = self.tf_to_cartesian(np.eye(4))[-1]
+        self._logger.info(f"min height: {self._min_height}")
+
 
     @staticmethod
     def load_model(path: pathlib.Path):
@@ -163,7 +133,6 @@ class TilesLoader:
                     texture = tm.visual.TextureVisuals(uv=uvs, image=img, material=material)
                 trim = tm.Trimesh(vertices=vertices, faces=faces, visual=texture)
                 trim.fix_normals()
-
                 trimeshes.append(trim)
             return trimeshes
         
@@ -188,6 +157,11 @@ class TilesLoader:
         return self._origin_translation
     
 
+    @property
+    def min_height(self):
+        return self._min_height
+    
+
     def get_transformed_meshes(self):
         origin = None
         meshes = []
@@ -210,4 +184,9 @@ class TilesLoader:
         coors_tf[:3, 3] = pos
         coords_tf = np.linalg.inv(self.origin_translation) @ np.linalg.inv(self.origin_rotation) @ coors_tf @ self.origin_rotation
         return coords_tf
+    
+
+    def tf_to_cartesian(self, tf):
+        pos = np.linalg.inv(np.linalg.inv(self.origin_translation) @ np.linalg.inv(self.origin_rotation)) @ tf
+        return wsg84_to_cartesian(pos[0, 3], pos[1, 3], pos[2, 3])
     

@@ -4,45 +4,53 @@ import trimesh as tm
 import numpy as np
 import json
 import tqdm
+import logging
 import lct_solution as lct
-from lct_solution import (Primitive, Polygon, MultiPolygon, Point, PolygonSegment)
+from lct_solution import (Primitive, 
+    Polygon, 
+    MultiPolygon, 
+    Point, 
+    PolygonSegment)
+
+
+category_colors = {
+    # green
+    "park": [0, 255, 0, 200],
+    # yellow
+    "footway": [255, 255, 0, 200],
+    # violet
+    "barrier": [255, 0, 255, 200],
+    # black
+    "road": [0, 0, 0, 200],
+    # blue
+    "water": [0, 0, 255, 200],
+    # gray
+    "historic": [128, 128, 128, 200]
+}
 
 
 def process_geojson(geo_data, tileset):
     features = []
-    for feature in tqdm.tqdm(geo_data['features']):
+    for feature in tqdm.tqdm(geo_data['features'], desc="Processing features"):
+        if feature['properties']['class'] not in category_colors.keys():
+            continue
         try:
             primitive = Primitive(tileset, feature)
-        except ValueError as e:
-            print(f"Error processing feature: {e}")
+        except Exception as e:
+            logging.exception(f"error processing feature: {e}")
             continue
         features.append(primitive)
     return features
 
 
-category_colors = {
-    # green
-    "park": [0, 255, 0, 255],
-    # yellow
-    "footway": [255, 255, 0, 255],
-    # black
-    "building": [0, 0, 0, 255],
-    # violet
-    "barrier": [255, 0, 255, 255]
-}
-
-
-
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     tileset_filename = "tileset_box_b3dm_crop.json"
-    root_dir = "Tile_p3646_p720_glb"
+    root_dir = "decompressed"
     geojson_filename = "geo_classified_full.geojson"
-    heght = 165
-    # coords = [55.75873228450434, 37.58316666796509, 160.29468727577478]
-    
+
     with open(geojson_filename) as f:
         geojson = json.load(f)
-    
 
     tiles = lct.TilesLoader(root_dir, tileset_filename)
 
@@ -60,8 +68,6 @@ if __name__ == "__main__":
             continue
         scene.add_geometry(mesh)
         total += 1
-    print("total: ", total)
-    # scene.add_geometry(tm.creation.axis(origin_size=1, transform=coords_tf))
+    logging.info(f"Total features added: {total}")
     scene.add_geometry(tm.creation.axis(origin_size=5))
-    # scene.apply_scale(0.1)
     scene.show()

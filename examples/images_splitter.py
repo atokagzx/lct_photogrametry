@@ -1,19 +1,15 @@
 #!/usr/bin/env python3
 
-import typing
-import trimesh as tm
-import numpy as np
-import pyrender
-import PIL
+import logging
 import os
 from pathlib import Path
 import json
-import tqdm
 import matplotlib.pyplot as plt
 import lct_solution as lct
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     tileset_filename = "tileset_box_b3dm_crop.json"
     root_dir = "Tile_p3646_p720_glb"
     save_dir = Path("out_img")

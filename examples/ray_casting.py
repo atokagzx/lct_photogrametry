@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 
 import trimesh as tm
+import logging
 import numpy as np
 import lct_solution as lct
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     tileset_filename = "tileset_box_b3dm_crop.json"
     root_dir = "Tile_p3646_p720_glb"
     tiles = lct.TilesLoader(root_dir, tileset_filename)
@@ -29,5 +31,4 @@ if __name__ == "__main__":
         point = np.eye(4)
         point[:3, 3] = i
         scene.add_geometry(tm.creation.axis(origin_size=4, transform=point))
-        
     scene.show()
