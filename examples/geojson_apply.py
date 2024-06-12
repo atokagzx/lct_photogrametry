@@ -3,14 +3,14 @@
 import trimesh as tm
 import numpy as np
 import json
+import tqdm
 import lct_solution as lct
-
 from lct_solution import (Primitive, Polygon, MultiPolygon, Point, PolygonSegment)
 
 
 def process_geojson(geo_data, tileset):
     features = []
-    for feature in geo_data['features']:
+    for feature in tqdm.tqdm(geo_data['features']):
         try:
             primitive = Primitive(tileset, feature)
         except ValueError as e:

@@ -35,15 +35,13 @@ class TilesLoader:
         self._origin_translation = None
         self._find_corner()
         self._loaded_models = {}
-        for tile in tqdm.tqdm(self._tiles, desc="Loading .glb models", unit="tile", leave=False):
+        for tile in tqdm.tqdm(self._tiles, desc="Loading .glb models", unit="tile", leave=True):
             if tile.uri not in self._loaded_models:
                 try:
                     trimeshes = self.load_model(root_dir / tile.uri)
                 except (pyassimp.errors.AssimpError, FileNotFoundError) as e:
                     print(f"Error loading {tile.uri}: {e}")
                     continue
-                else:
-                    print(f"Succesfully loaded {tile.uri}")
                 # if self._origin_translation is None:
                 #     print("Warning: origin translation is not set")
                 #     origin_translation = np.eye(4)
@@ -64,13 +62,6 @@ class TilesLoader:
         if 'children' not in a:
             if 'content' in a:
                 uri = a['content']['uri']
-                if uri.endswith('.json'):
-                    include_file = self._root_dir / uri
-                    print(f"Loading additional tileset: {include_file}")
-                    with open(include_file) as f:
-                        a = json.load(f)
-                    self._get_child(a['root'], level + 1)
-                    return
                 bounding_volume = np.array(a['boundingVolume']['box'])
                 geometric_error = a['geometricError']
                 tile = Tile(uri, bounding_volume, geometric_error)
@@ -80,11 +71,32 @@ class TilesLoader:
             self._get_child(i, level + 1)
 
 
+
+
+
+    # def _get_child(self, a, level):
+    #     if 'content' in a:
+    #         uri = a['content']['uri']
+    #         if uri.endswith('.json'):
+    #             include_file = self._root_dir / uri
+    #             print(f"Loading additional tileset: {include_file}")
+    #             with open(include_file) as f:
+    #                 a = json.load(f)
+    #             self._get_child(a['root'], level + 1)
+    #         else:
+    #             if 'children' not in a:
+    #                 bounding_volume = np.array(a['boundingVolume']['box'])
+    #                 geometric_error = a['geometricError']
+    #                 tile = Tile(uri, bounding_volume, geometric_error)
+    #                 self._tiles.append(tile)
+    #     if 'children' in a:
+    #         for i in a['children']:
+    #             self._get_child(i, level + 1)
+
     def _find_corner(self):
         # TODO: fix this
         min_x = min_y = min_z = float('inf')
         max_x = max_y = max_z = float('-inf')
-        print("rot: ", self._origin_rotation)
         # scene = tm.Scene()
         for tile in self._tiles:
             box_translation = np.eye(4)
