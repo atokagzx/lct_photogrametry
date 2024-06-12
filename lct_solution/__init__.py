@@ -1,5 +1,6 @@
 from ._datatypes import (Tile,
-                         transform_mtx)
+    transform_mtx,
+    EmptyPolygon)   
 from ._loader import TilesLoader
 from ._utils import (compute_origin)
 from ._renderer import (split_images)

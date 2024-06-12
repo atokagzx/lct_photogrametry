@@ -20,15 +20,15 @@ from ._geography import (cartesian_to_wsg84,
 
 
 class TilesLoader:
-    def __init__(self, root_dir, root_tileset_filename):
+    def __init__(self, root_dir):
         self._logger = logging.getLogger("tiles_loader")
         self._origin_translation = None
         root_dir = pathlib.Path(root_dir)
-        self._root_dir = root_dir   
+        self._root_dir = root_dir
         self._tiles = []
-        with open(root_dir / root_tileset_filename) as f:
-            root_tileset = json.load(f)
-        self._get_child(root_tileset['root'], 0)
+        
+
+    def _load(self, root_dir):
         self._tfs = []
         self._origin_rotation = compute_origin(self._tiles)
         self._logger.info(f"origin rotation: {self._origin_rotation}")
@@ -51,6 +51,41 @@ class TilesLoader:
                     tf.apply_transform(np.linalg.inv(self.origin_translation) @ np.linalg.inv(self.origin_rotation)  @ box_translation)
                     self._tfs.append(tf)
                 self._loaded_models[tile.uri] = trimeshes
+
+
+    @classmethod
+    def from_planar(cls, root_dir, root_tileset_filename) -> 'TilesLoader':
+        '''
+        Load tiles from a planar json file
+        @param root_dir: root directory of the tileset
+        @param root_tileset_filename: filename of the tileset, should be a json file at the root of the tileset
+        '''
+        loader = cls(root_dir)
+        with open(loader._root_dir / root_tileset_filename) as f:
+            tileset = json.load(f)
+        for tile in tileset['data']:
+            box = np.array(tile['boundingVolume']['box'])
+            geometric_error = None
+            uri = tile['content']['uri']
+            tile = Tile(uri, box, geometric_error)
+            loader._tiles.append(tile)
+        loader._load(loader._root_dir)
+        return loader
+
+
+    @classmethod
+    def from_tileset(cls, root_dir, root_tileset_filename) -> 'TilesLoader':
+        '''
+        Recursively load tiles from a tileset
+        @param root_dir: root directory of the tileset
+        @param root_tileset_filename: filename of the tileset, should be a json file at the root of the tileset
+        '''
+        loader = cls(root_dir)
+        with open(loader._root_dir / root_tileset_filename) as f:
+            root_tileset = json.load(f)
+        loader._get_child(root_tileset['root'], 0)
+        loader._load(loader._root_dir)
+        return loader
 
 
     def _get_child(self, a, level):

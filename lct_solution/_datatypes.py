@@ -15,3 +15,7 @@ class Tile:
     # group: str
     box: np.ndarray
     geometric_error: float
+
+
+class EmptyPolygon(Exception):
+    pass

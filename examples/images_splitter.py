@@ -14,7 +14,7 @@ if __name__ == "__main__":
     root_dir = "Tile_p3646_p720_glb"
     save_dir = Path("out_img")
     os.makedirs(save_dir, exist_ok=True)
-    tiles = lct.TilesLoader(root_dir, tileset_filename)
+    tiles = lct.TilesLoader.from_tileset(root_dir, tileset_filename)
     meshes = tiles.models.values()
     splitted = lct.split_images(tiles, 
                                 (4, 4), 

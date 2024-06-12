@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import tqdm
 import logging
 from scipy.spatial import Delaunay
+from ._datatypes import EmptyPolygon
 import traceback
 
 class Point:
@@ -13,12 +14,13 @@ class Point:
         self._tileset = tileset
         self._cartesian = cartesian
         self._tf = self._tileset.cartesian_to_tf([cartesian[1], cartesian[0], default_height])
-        if len(cartesian) == 2:
-            self._tf[:3, 3][2] = 0
-        elif len(cartesian) == 3:
-            self._tf[:3, 3][2] = cartesian[2]
-        else:
-            raise ValueError(f"Wrong point format: {cartesian}")
+        self._tf[:3, 3][2] = 0
+        # if len(cartesian) == 2:
+        #     self._tf[:3, 3][2] = 0
+        # elif len(cartesian) == 3:
+        #     self._tf[:3, 3][2] = cartesian[2]
+        # else:
+        #     raise ValueError(f"Wrong point format: {cartesian}")
         
 
     def to_trimesh(self, color=None):
@@ -37,6 +39,18 @@ class Point:
         point = cls(tileset, [0, 0, 0])
         point._tf = tf
         return point
+    
+
+    def _update_cartesian(self):
+        self._cartesian = self._tileset.tf_to_cartesian(self._tf)
+
+
+    def as_geojson(self):
+        self._update_cartesian()
+        return {
+            "type": "Point",
+            "coordinates": [self._cartesian[1], self._cartesian[0], self._cartesian[2]]
+        }
 
 
 class PolygonSegment:
@@ -46,6 +60,8 @@ class PolygonSegment:
         self._points = [Point(tileset, point) for point in points]
         # self._interpolate()
         self._find_real_height()
+        if len(self._points) < 4:
+            raise EmptyPolygon("Polygon has less than 4 points")
 
 
     def _interpolate(self):
@@ -92,7 +108,7 @@ class PolygonSegment:
             for point in points:
                 xyz = point._tf[:3, 3]
                 #  check if the point is too far from the tile center in 2D
-                if np.linalg.norm(tile_center - xyz[:2]) < 200:
+                if np.linalg.norm(tile_center - xyz[:2]) < 50:
                     return True
             return False
         
@@ -129,21 +145,53 @@ class PolygonSegment:
                     check_if_point_is_unique(location, points_set)
             real_points.extend(points_set)
 
+        if not real_points:
+            self._points = []
+            return
+        # self._points = []
+        new_points = []
+        # for point in real_points:
+        #     tf = np.eye(4)
+        #     tf[:3, 3] = point
+        #     self._points.append(Point.from_tf(self._tileset, tf))
+        #     self._logger.debug(f"found intersection for point {point}")
+        for point in self._points:
+            if not real_points:
+                break
+            nearst_idx = np.argmin([np.linalg.norm(x[:2] - point._tf[:3, 3][:2]) for x in real_points])
+            # check if the point is too far from the tile center in 2D
+            if np.linalg.norm(self._tileset.origin_translation[:2, 3] - real_points[nearst_idx][:2]) < 0.1:
+                tf = np.eye(4)
+                tf[:3, 3] = real_points[nearst_idx]
+                new_points.append(Point.from_tf(self._tileset, tf))
+            else:
+                # height mean of real points
+                mean_height = np.mean([x[2] for x in real_points])
+                tf = np.eye(4)
+                tf[:3, 3] = point._tf[:3, 3]
+                tf[:3, 3][2] = mean_height
+                new_points.append(Point.from_tf(self._tileset, tf))
+        self._points = new_points
 
-        self._points = []
-        for point in real_points:
-            tf = np.eye(4)
-            tf[:3, 3] = point
-            self._points.append(Point.from_tf(self._tileset, tf))
-            self._logger.debug(f"found intersection for point {point}")
+
+    def as_geojson(self):
+        return [point.as_geojson()['coordinates'] for point in self._points]
 
 
 class Polygon:
     def __init__(self, tileset, segments):
         self._logger = logging.getLogger("primitive.polygon")
         self._tileset = tileset
-        self._segments = [PolygonSegment(tileset, segment) for segment in segments]
-
+        self._segments = []
+        for segment in segments:
+            try:
+                polygon_segment = PolygonSegment(tileset, segment)
+            except EmptyPolygon as e:
+                continue
+            self._segments.append(polygon_segment)
+        if not self._segments:
+            raise EmptyPolygon("Polygon has no segments")
+        
 
     def to_trimesh(self, color=None):
         meshes = []
@@ -152,13 +200,33 @@ class Polygon:
             if mesh is not None:
                 meshes.append(mesh)
         return meshes
+    
+
+    def as_geojson(self):
+        data = {
+            "type": "Polygon",
+            "coordinates": []
+        }
+        for segment in self._segments:
+            data['coordinates'].append(segment.as_geojson())
+        return data
+        
 
 
 class MultiPolygon:
     def __init__(self, tileset, polygons):
         self._logger = logging.getLogger("primitive.multi_polygon")
         self._tileset = tileset
-        self._polygons = [Polygon(tileset, polygon) for polygon in polygons]
+        # self._polygons = [Polygon(tileset, polygon) for polygon in polygons]
+        self._polygons = []
+        for polygon in polygons:
+            try:
+                polygon = Polygon(tileset, polygon)
+            except EmptyPolygon as e:
+                continue
+            self._polygons.append(polygon)
+        if not self._polygons:
+            raise EmptyPolygon("MultiPolygon has no polygons")
 
 
     def to_trimesh(self, color=None):
@@ -168,21 +236,37 @@ class MultiPolygon:
             if mesh is not None:
                 meshes.extend(mesh)
         return meshes
+    
+
+    def as_geojson(self):
+        data = {
+            "type": "MultiPolygon",
+            "coordinates": []
+        }
+        for polygon in self._polygons:
+            data['coordinates'].append(polygon.as_geojson())
+        return data
 
 
 class Primitive:
     def __init__(self, tileset, feature):
         self._logger = logging.getLogger("primitive")
         self._tileset = tileset
+        self._element_type = feature['properties']['element_type']
+        self._osm_id = feature['properties']['osmid']
+        self._name = feature['properties']['name']
         self._category = feature['properties']['class']
-        if feature['geometry']['type'] == 'Polygon':
-            primitive = Polygon(tileset, feature['geometry']['coordinates'])
-        elif feature['geometry']['type'] == 'MultiPolygon':
-            primitive = MultiPolygon(tileset, feature['geometry']['coordinates'])
-        elif feature['geometry']['type'] == 'Point':
-            primitive = Point(tileset, feature['geometry']['coordinates'])
-        else:
-            raise ValueError(f"Unknown geometry type: {feature['geometry']['type']}")
+        try:
+            if feature['geometry']['type'] == 'Polygon':
+                primitive = Polygon(tileset, feature['geometry']['coordinates'])
+            elif feature['geometry']['type'] == 'MultiPolygon':
+                primitive = MultiPolygon(tileset, feature['geometry']['coordinates'])
+            elif feature['geometry']['type'] == 'Point':
+                primitive = Point(tileset, feature['geometry']['coordinates'])
+            else:
+                raise ValueError(f"Unknown geometry type: {feature['geometry']['type']}")
+        except EmptyPolygon as e:
+            raise
         self._primitive = primitive
 
 
@@ -193,4 +277,18 @@ class Primitive:
     @property
     def category(self):
         return self._category
+    
+
+    def as_geojson(self):
+        data = {
+            "type": "Feature",
+            "properties": {
+                "element_type": self._element_type,
+                "osmid": self._osm_id,
+                "name": self._name,
+                "class": self._category
+            },
+        }
+        data['geometry'] = self._primitive.as_geojson()
+        return data
     

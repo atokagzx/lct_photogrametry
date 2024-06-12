@@ -6,6 +6,7 @@ import json
 import tqdm
 import logging
 import lct_solution as lct
+from lct_solution._datatypes import EmptyPolygon
 from lct_solution import (Primitive, 
     Polygon, 
     MultiPolygon, 
@@ -36,6 +37,8 @@ def process_geojson(geo_data, tileset):
             continue
         try:
             primitive = Primitive(tileset, feature)
+        except EmptyPolygon as e:
+            continue
         except Exception as e:
             logging.exception(f"error processing feature: {e}")
             continue
@@ -52,22 +55,34 @@ if __name__ == "__main__":
     with open(geojson_filename) as f:
         geojson = json.load(f)
 
-    tiles = lct.TilesLoader(root_dir, tileset_filename)
+    tiles = lct.TilesLoader.from_tileset(root_dir, tileset_filename)
 
     features = process_geojson(geojson, tiles)
 
     meshes = tiles.models.values()
-    scene = tm.Scene(meshes)
-    total = 0
+    if True:
+        scene = tm.Scene(meshes)
+        total = 0
+        for feature in features:
+            if feature.category not in category_colors:
+                continue
+            color = category_colors[feature.category]
+            mesh = feature.to_trimesh(color)
+            if mesh is None:
+                continue
+            scene.add_geometry(mesh)
+            total += 1
+        logging.info(f"Total features added: {total}")
+        scene.add_geometry(tm.creation.axis(origin_size=5))
+        scene.show()
+    logging.info("Saving output.geojson")
+    data = {
+        "type": "FeatureCollection",
+        "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:OGC:1.3:CRS84" } },
+        "features": []}
     for feature in features:
         if feature.category not in category_colors:
             continue
-        color = category_colors[feature.category]
-        mesh = feature.to_trimesh(color)
-        if mesh is None:
-            continue
-        scene.add_geometry(mesh)
-        total += 1
-    logging.info(f"Total features added: {total}")
-    scene.add_geometry(tm.creation.axis(origin_size=5))
-    scene.show()
+        data["features"].append(feature.as_geojson())
+    with open("output.geojson", "w") as f:
+        json.dump(data, f, indent=4, ensure_ascii=False)
