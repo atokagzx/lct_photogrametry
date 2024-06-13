@@ -1,4 +1,4 @@
-from decompress import GLBDecompress
+from lct_solution.glb import GLBDecompress
 import json
 import os
 import subprocess

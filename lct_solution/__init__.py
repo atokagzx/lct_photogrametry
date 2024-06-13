@@ -13,3 +13,4 @@ from ._meshes import (Primitive,
     PolygonSegment,
     Polygon,
     MultiPolygon)
+import glb
