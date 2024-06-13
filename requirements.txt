@@ -1,8 +1,6 @@
 numpy==1.26.2
 open3d==0.18.0
-opencv-python==4.8.0
-embreex==2.17.7.post4
-pyembree==0.1.12
+opencv-python==4.8.*
 trimesh==4.4.1
 tqdm==4.66.1
 scipy==1.11.3
