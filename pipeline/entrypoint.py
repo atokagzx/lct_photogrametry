@@ -19,6 +19,10 @@ if __name__ == '__main__':
         sys.argv.pop(1)
         from pipeline._splitimgs import main
         main()
+    elif sys.argv[1] == 'tfgeojson':
+        sys.argv.pop(1)
+        from pipeline._transform_geojson import main
+        main()
     else:
         logger.error("Available commands: decompress, splitimgs")
         sys.exit(1)

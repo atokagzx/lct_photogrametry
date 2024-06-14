@@ -1,17 +1,9 @@
 #!/usr/bin/env python3
 
 import trimesh as tm
-import numpy as np
 import json
-import tqdm
 import logging
 import lct_solution as lct
-from lct_solution._datatypes import EmptyPolygon
-from lct_solution import (Primitive, 
-    Polygon, 
-    MultiPolygon, 
-    Point, 
-    PolygonSegment)
 
 
 category_colors = {
@@ -30,22 +22,6 @@ category_colors = {
 }
 
 
-def process_geojson(geo_data, tileset):
-    features = []
-    for feature in tqdm.tqdm(geo_data['features'], desc="Processing features"):
-        if feature['properties']['class'] not in category_colors.keys():
-            continue
-        try:
-            primitive = Primitive(tileset, feature)
-        except EmptyPolygon as e:
-            continue
-        except Exception as e:
-            logging.exception(f"error processing feature: {e}")
-            continue
-        features.append(primitive)
-    return features
-
-
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     tileset_filename = "tileset_box_b3dm_crop.json"
@@ -57,7 +33,7 @@ if __name__ == "__main__":
 
     tiles = lct.TilesLoader.from_tileset(root_dir, tileset_filename)
 
-    features = process_geojson(geojson, tiles)
+    features = lct.process_geojson(geojson, tiles, category_colors)
 
     meshes = tiles.models.values()
     if True:

@@ -46,4 +46,5 @@ RUN npm install -g 3d-tiles-tools
 
 ENV PYTHONPATH "${PYTHONPATH}:/root/workspace"
 WORKDIR /root/workspace
+RUN pip install --no-cache-dir PyOpenGL-accelerate==3.1.7 
 ENTRYPOINT ["pipeline/entrypoint.py"]

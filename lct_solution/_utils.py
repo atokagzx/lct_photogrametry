@@ -2,7 +2,11 @@ import numpy as np
 import open3d as o3d
 import trimesh as tm
 import typing
-from ._datatypes import Tile
+import logging
+from ._datatypes import (Tile,
+                         EmptyPolygon)
+from ._meshes import Primitive
+import tqdm
 
 
 def validate_rotation_matrix(R):
@@ -53,3 +57,19 @@ def compute_origin(tiles: typing.List[Tile]) -> np.ndarray:
                         [0, 0, 0, 1]])
     rot_matrix = np.dot(rot_matrix, add_rot)
     return rot_matrix
+
+
+def process_geojson(geo_data, tileset, category_colors:dict):
+    features = []
+    for feature in tqdm.tqdm(geo_data['features'], desc="Processing features on geojson"):
+        if feature['properties']['class'] not in category_colors.keys():
+            continue
+        try:
+            primitive = Primitive(tileset, feature)
+        except EmptyPolygon as e:
+            continue
+        except Exception as e:
+            logging.exception(f"error processing feature: {e}")
+            continue
+        features.append(primitive)
+    return features

@@ -123,10 +123,10 @@ def main():
     argparser = argparse.ArgumentParser(description='Decompress glb files')
     argparser.add_argument('--root_dir', type=str, help='Input path', required=True)
     argparser.add_argument('--tileset', type=str, help='Tileset json file', required=True)
-    argparser.add_argument('--output', type=str, help='Output path', default="output")
-    output_folder = argparser.parse_args().output
+    argparser.add_argument('--output', type=str, help='Output path', default="output/decompressed")
 
     args = argparser.parse_args()
+    output_folder = args.output
 
     ts = Tileset(args.root_dir, args.tileset)
     
