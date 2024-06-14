@@ -46,3 +46,4 @@ RUN npm install -g 3d-tiles-tools
 
 ENV PYTHONPATH "${PYTHONPATH}:/root/workspace"
 WORKDIR /root/workspace
+ENTRYPOINT ["pipeline/entrypoint.py"]
