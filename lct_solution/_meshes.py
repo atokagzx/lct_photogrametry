@@ -278,9 +278,7 @@ class Primitive:
     def __init__(self, tileset, feature):
         self._logger = logging.getLogger("primitive")
         self._tileset = tileset
-        self._element_type = feature['properties']['element_type']
-        self._osm_id = feature['properties']['osmid']
-        self._name = feature['properties']['name']
+        self._properties = feature['properties']
         self._category = feature['properties']['class']
         try:
             if feature['geometry']['type'] == 'Polygon':
@@ -308,12 +306,7 @@ class Primitive:
     def as_geojson(self):
         data = {
             "type": "Feature",
-            "properties": {
-                "element_type": self._element_type,
-                "osmid": self._osm_id,
-                "name": self._name,
-                "class": self._category
-            },
+            "properties": self._properties
         }
         data['geometry'] = self._primitive.as_geojson()
         return data
