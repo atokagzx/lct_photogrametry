@@ -33,5 +33,16 @@ RUN pip3 install -r /tmp/requirements.txt --no-cache-dir
 RUN pip3 install --no-cache-dir --no-deps embreex==2.17.7.post4 "pyglet<2" \
     pyembree==0.1.12 
 
+# Install Cesium 3D Tiles Tools
+RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash && \
+    export NVM_DIR="$HOME/.nvm" && \
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" && \
+    [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion" && \
+    nvm install 18.17.0 && \
+    nvm use 18.17.0 && \
+    npm install -g npm@10.8.1 
+ENV PATH="${PATH}:/root/.nvm/versions/node/v18.17.0/bin"
+RUN npm install -g 3d-tiles-tools
+
 ENV PYTHONPATH "${PYTHONPATH}:/root/workspace"
 WORKDIR /root/workspace
