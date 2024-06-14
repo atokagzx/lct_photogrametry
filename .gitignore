@@ -14,3 +14,4 @@
 *.json
 *.geojson
 /cache
+/webserver/node_modules
