@@ -7,6 +7,7 @@
 .vscode/
 *.glb
 *.gltf
+*.b3dm
 *.png
 *.jpg
 *.jpeg

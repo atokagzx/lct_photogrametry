@@ -49,7 +49,7 @@ def process_geojson(geo_data, tileset):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     tileset_filename = "tileset_box_b3dm_crop.json"
-    root_dir = "decompressed"
+    root_dir = "Tile_p3646_p720_glb"
     geojson_filename = "geo_classified_full.geojson"
 
     with open(geojson_filename) as f:

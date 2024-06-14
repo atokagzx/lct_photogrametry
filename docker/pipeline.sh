@@ -3,7 +3,8 @@
 xhost +local:docker || true
 
 ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
-docker run \
+
+docker run -ti --rm \
       -e "DISPLAY" \
       -e "QT_X11_NO_MITSHM=1" \
       -v "/tmp/.X11-unix:/tmp/.X11-unix:rw" \
@@ -13,4 +14,5 @@ docker run \
       -v $ROOT_DIR/cache:/root/.cache \
       --net=host \
       --privileged \
-      --name lct_photogrametry lct_photogrametry-img 
+      --name lct_photogrametry lct_photogrametry-img "$@"
+      

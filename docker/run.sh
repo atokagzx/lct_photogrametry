@@ -3,6 +3,7 @@
 xhost +local:docker || true
 
 ROOT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+
 docker run -ti --rm \
       -e "DISPLAY" \
       -e "QT_X11_NO_MITSHM=1" \

@@ -466,7 +466,7 @@ class GLBSegment(GLBDecompress):
             self.glb.model.meshes,
             desc="Loading meshes",
             unit="mesh",
-            leave=False,
+            leave=True,
         ):
             primitives: list[PrimitiveSegment] = []
             for primitive in tqdm(
