@@ -73,7 +73,7 @@ def main():
             continue
         data["features"].append(feature.as_geojson())
     with open(output_folder / 'transformed.geojson', 'w') as f:
-        json.dump(data, f, indent=4, ensure_ascii=False)
+        json.dump(data, f, indent=0, ensure_ascii=False)
     logging.info("done")
 
 

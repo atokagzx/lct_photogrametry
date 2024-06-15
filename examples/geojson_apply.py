@@ -26,7 +26,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     tileset_filename = "tileset_box_b3dm_crop.json"
     root_dir = "Tile_p3646_p720_glb"
-    geojson_filename = "geo_classified_full.geojson"
+    geojson_filename = "input_new.geojson"
 
     with open(geojson_filename) as f:
         geojson = json.load(f)
@@ -60,5 +60,5 @@ if __name__ == "__main__":
         if feature.category not in category_colors:
             continue
         data["features"].append(feature.as_geojson())
-    with open("output.geojson", "w") as f:
+    with open("processed.geojson", "w") as f:
         json.dump(data, f, indent=4, ensure_ascii=False)

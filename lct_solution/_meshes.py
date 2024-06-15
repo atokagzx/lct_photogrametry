@@ -6,6 +6,8 @@ import logging
 from scipy.spatial import Delaunay
 from ._datatypes import EmptyPolygon
 import traceback
+from sklearn.cluster import DBSCAN
+
 
 class Point:
     def __init__(self, tileset, cartesian):
@@ -51,44 +53,64 @@ class Point:
             "type": "Point",
             "coordinates": [self._cartesian[1], self._cartesian[0], self._cartesian[2]]
         }
-
-
-def rdp(points, epsilon=1e-3):
-    '''
-    Ramer-Douglas-Peucker algorithm
-    @param points: list of points
-    @param epsilon: tolerance
-    '''
-    def _rdp_recursion(points, epsilon):
-        dmax = 0
-        index = 0
-        end = len(points)
-        for i in range(1, end - 1):
-            d = np.linalg.norm(np.cross(points[end - 1] - points[0], points[i] - points[0])) / np.linalg.norm(points[end - 1] - points[0])
-            if d > dmax:
-                index = i
-                dmax = d
-        if dmax > epsilon:
-            results = _rdp_recursion(points[:index + 1], epsilon)[:-1] + _rdp_recursion(points[index:], epsilon)
-        else:
-            results = [points[0], points[-1]]
-        return results
-    return _rdp_recursion(points, epsilon)
+    
+def perpendicular_distance(point, line_start, line_end):
+    if np.all(line_start == line_end):
+        return np.linalg.norm(point - line_start)
+    return np.linalg.norm(np.cross(line_end-line_start, line_start-point)) / np.linalg.norm(line_end-line_start)
 
 
 class PolygonSegment:
-    def __init__(self, tileset, points):
+    def __init__(self, tileset, points, apply_rdp=False):
         self._logger = logging.getLogger("primitive.polygon_segment")
         self._tileset = tileset
         self._points = [Point(tileset, point) for point in points]
-        # self._interpolate()
-        # self._points = rdp([point._tf[:3, 3] for point in self._points], epsilon=1e-3)
+        self._interpolate()
+        if apply_rdp:
+            origin_num = len(self._points)
+            new_tfs = []
+            for point in self._points:
+                tf = np.eye(4)
+                tf[:3, 3] = point
+                new_tfs.append(tf)
+            self._points = [Point.from_tf(tileset, tf) for tf in new_tfs]
+            # self._logger.debug(f"Reduced points from {origin_num} to {len(self._points)}")
         self._find_real_height()
         if len(self._points) < 4:
             raise EmptyPolygon("Polygon has less than 4 points")
+        
+        
+    @staticmethod
+    def rdp(points, epsilon):
+        """
+        Recursively simplify points using the Ramer-Douglas-Peucker algorithm
+        @param points: list of points
+        @param epsilon: tolerance, maximum distance from a point to the line between the start and end points
+        """
+        def find_farthest_point(points, start, end):
+            max_distance = 0
+            index = start
+            for i in range(start + 1, end):
+                distance = perpendicular_distance(points[i], points[start], points[end])
+                if distance > max_distance:
+                    max_distance = distance
+                    index = i
+            return max_distance, index
+
+        def rdp_recursive(points, start, end, epsilon):
+            max_distance, index = find_farthest_point(points, start, end)
+            if max_distance > epsilon:
+                results1 = rdp_recursive(points, start, index, epsilon)
+                results2 = rdp_recursive(points, index, end, epsilon)
+                return results1[:-1] + results2
+            else:
+                return [points[start], points[end]]
+
+        return rdp_recursive(points, 0, len(points) - 1, epsilon)
 
 
-    def _interpolate(self, step=2):
+
+    def _interpolate(self, step=1):
         new_points = []
         for i in range(len(self._points)):
             p1 = self._points[i]
@@ -130,7 +152,7 @@ class PolygonSegment:
             for point in points:
                 xyz = point._tf[:3, 3]
                 #  check if the point is too far from the tile center in 2D
-                if np.linalg.norm(tile_center - xyz[:2]) < 50:
+                if np.linalg.norm(tile_center - xyz[:2]) < 1.2 * tile.box[3]:
                     return True
             return False
         
@@ -167,25 +189,50 @@ class PolygonSegment:
                     check_if_point_is_unique(location, points_set)
             real_points.extend(points_set)
 
-        if not real_points:
+        if len(real_points) < 5:
             self._points = []
             return
-        # self._points = []
         new_points = []
-        # for point in real_points:
-        #     tf = np.eye(4)
-        #     tf[:3, 3] = point
-        #     self._points.append(Point.from_tf(self._tileset, tf))
-        #     self._logger.debug(f"found intersection for point {point}")
-
-        mean_height = np.mean([x[2] for x in real_points])
+        # # apply db scan to filter out outliers
+        # real_points = np.array(real_points)
+        # # eps = 3 meters, min_samples = 3
+        # db = DBSCAN(eps=3, min_samples=3).fit(real_points)
+        # labels = db.labels_
+        # unique_labels = set(labels)
+        # #  find the most common label
+        # max_label = None
+        # max_count = 0
+        # for label in unique_labels:
+        #     count = np.sum(labels == label)
+        #     if count > max_count:
+        #         max_count = count
+        #         max_label = label
+        # apply dbscan only for z axis
+        real_points = np.array(real_points)
+        labels = np.zeros(len(real_points))
+        db = DBSCAN(eps=3, min_samples=4).fit(real_points[:, 2].reshape(-1, 1))
+        labels = db.labels_
+        unique_labels = np.unique(labels)
+        if len(unique_labels) == 0:
+            print("No labels")
+        labels_count = np.zeros(len(unique_labels))
+        for i, label in enumerate(unique_labels):
+            labels_count[i] = np.sum(labels == label)
+        # max_label = unique_labels[np.argmax(labels_count)]
+        max_label = np.argmax(labels_count)
+        # compute mean height only for the most common label
+        if max_label == -1:
+            print("No labels")
+            self._points = []
+            return
+        mean_height = np.mean(real_points[labels == max_label][:, 2])
         for point in self._points:
-            if not real_points:
-                break
             nearst_idx = np.argmin([np.linalg.norm(x[:2] - point._tf[:3, 3][:2]) for x in real_points])
             if np.linalg.norm(point._tf[:3, 3][:2] - real_points[nearst_idx][:2]) < 0.5:
                 tf = np.eye(4)
                 tf[:3, 3] = real_points[nearst_idx]
+                if labels[nearst_idx] != max_label:
+                    tf[:3, 3][2] = mean_height
                 new_points.append(Point.from_tf(self._tileset, tf))
             else:
                 # height mean of real points
@@ -193,10 +240,6 @@ class PolygonSegment:
                 tf[:3, 3] = point._tf[:3, 3]
                 tf[:3, 3][2] = mean_height
                 new_points.append(Point.from_tf(self._tileset, tf))
-        # for point in new_points:
-        #     # if height is too different from the mean height, set the mean height
-        #     if np.abs(point._tf[:3, 3][2] - mean_height) > 3:
-        #         point._tf[:3, 3][2] = mean_height
         self._points = new_points
 
 

@@ -10,3 +10,6 @@ pyassimp==5.2.5
 pygltflib==1.16.2
 gltflib==1.0.13
 DracoPy==1.4.0
+scikit-learn==1.5.0
+threadpoolctl==3.5.0
+PyOpenGL-accelerate==3.1.7 

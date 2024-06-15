@@ -26,7 +26,7 @@ RUN apt update && apt install -y    apt-utils \
     apt clean && \
     rm -rf /var/lib/apt/lists/*
 
-
+# Install Python dependencies
 RUN pip3 install --upgrade setuptools pip --no-cache-dir
 COPY requirements.txt /tmp/requirements.txt
 RUN pip3 install -r /tmp/requirements.txt --no-cache-dir
@@ -44,7 +44,7 @@ RUN curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | b
 ENV PATH="${PATH}:/root/.nvm/versions/node/v18.17.0/bin"
 RUN npm install -g 3d-tiles-tools
 
+# Add workspace to PYTHONPATH to load lct_solution module
 ENV PYTHONPATH "${PYTHONPATH}:/root/workspace"
 WORKDIR /root/workspace
-RUN pip install --no-cache-dir PyOpenGL-accelerate==3.1.7 
 ENTRYPOINT ["pipeline/entrypoint.py"]
