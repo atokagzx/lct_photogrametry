@@ -76,3 +76,56 @@ dataSource.then(dataSource => {
         entity.polygon.material = classColor[classValue];
     });
 });
+
+const parkCheckbox = document.getElementById('parkCheckbox');
+const footwayCheckbox = document.getElementById('footwayCheckbox');
+const barrierCheckbox = document.getElementById('barrierCheckbox');
+const roadCheckbox = document.getElementById('roadCheckbox');
+const waterCheckbox = document.getElementById('waterCheckbox');
+const historicCheckbox = document.getElementById('historicCheckbox');
+const buildingCheckbox = document.getElementById('buildingCheckbox');
+
+function updateVisibility() {
+    dataSource.then(dataSource => {
+        dataSource.entities.values.forEach(entity => {
+            const classValue = entity.properties.class.getValue();
+            // Устанавливаем видимость в зависимости от состояния чекбоксов
+            switch (classValue) {
+                case 'park':
+                    entity.show = parkCheckbox.checked;
+                    break;
+                case 'footway':
+                    entity.show = footwayCheckbox.checked;
+                    break;
+                case 'barrier':
+                    entity.show = barrierCheckbox.checked;
+                    break;
+                case 'road':
+                    entity.show = roadCheckbox.checked;
+                    break;
+                case 'water':
+                    entity.show = waterCheckbox.checked;
+                    break;
+                case 'building':
+                    entity.show = buildingCheckbox.checked;
+                    break;
+                case 'historic':
+                    entity.show = historicCheckbox.checked;
+                    break;
+                default:
+                    // Если класс не указан, показываем объект
+                    entity.show = true;
+            }
+        });
+    });
+}
+
+parkCheckbox.addEventListener('change', updateVisibility);
+footwayCheckbox.addEventListener('change', updateVisibility);
+barrierCheckbox.addEventListener('change', updateVisibility);
+roadCheckbox.addEventListener('change', updateVisibility);
+waterCheckbox.addEventListener('change', updateVisibility);
+historicCheckbox.addEventListener('change', updateVisibility);
+buildingCheckbox.addEventListener('change', updateVisibility);
+
+updateVisibility();

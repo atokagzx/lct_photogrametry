@@ -6,10 +6,24 @@
   <script src="cesium/Cesium.js"></script>
   <link href="cesium/Widgets/widgets.css" rel="stylesheet">
   <link rel="stylesheet" href="main.css">
+  <title>Checkbox Styles</title>
+    <style>
+        .checkbox-label {
+            color: grey;
+        }
+    </style>
 </head>
 <body>
   <div id="cesiumContainer"></div>
+  <div id="controls">
+    <label class="checkbox-label"><input type="checkbox" id="parkCheckbox" checked> Park</label>
+    <label class="checkbox-label"><input type="checkbox" id="footwayCheckbox" checked> Footway</label>
+    <label class="checkbox-label"><input type="checkbox" id="barrierCheckbox" checked> Barrier</label>
+    <label class="checkbox-label"><input type="checkbox" id="roadCheckbox" checked> Road</label>
+    <label class="checkbox-label"><input type="checkbox" id="waterCheckbox" checked> Water</label>
+    <label class="checkbox-label"><input type="checkbox" id="historicCheckbox" checked> Historic</label>
+    <label class="checkbox-label"><input type="checkbox" id="buildingCheckbox" checked> Building</label>
+  </div>
   <script type="module" src="./index.js"></script>
- </div>
 </body>
 </html>
