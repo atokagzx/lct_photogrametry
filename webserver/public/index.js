@@ -46,11 +46,19 @@ const customShader = new Cesium.CustomShader({
 
 // print tileset properties
 // console.log(tileset);
-// add button to toggle custom shader
+// add button to hide and show 3d model
 const button = document.createElement("button");
-button.textContent = "Toggle Custom Shader";
+button.textContent = "Скрыть 3D";
 button.onclick = () => {
-    tileset.customShader = tileset.customShader ? undefined : customShader;
+    // tileset.customShader = tileset.customShader ? undefined : customShader;
+    if (tileset.show == true) {
+        button.textContent = "Показать 3D";
+        tileset.show = false;
+      } else {
+        button.textContent = "Скрыть 3D";
+        tileset.show = true;
+      }
+    // tileset.show = false;
 }
 viewer.container.appendChild(button);
 
