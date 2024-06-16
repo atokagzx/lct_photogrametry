@@ -8,6 +8,7 @@ const app = express();
 app.use(express.static('public'));
 // app.use(express.static('out2'));
 app.use(express.static('../FGM_HACKATON/'));
+app.use(express.static('../output/'));
 // app.use(express.static('../../out2'));
 app.use('/cesium', express.static(__dirname + '/node_modules/cesium/Build/Cesium'));
 app.use(cors());

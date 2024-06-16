@@ -74,7 +74,7 @@ const classColor = {
 };
 
 // load geojson data
-const dataSource = Cesium.GeoJsonDataSource.load('result.geojson');
+const dataSource = Cesium.GeoJsonDataSource.load('transformed.geojson');
 viewer.dataSources.add(dataSource);
 
 // set colorize function
