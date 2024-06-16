@@ -13,3 +13,10 @@ DracoPy==1.4.0
 scikit-learn==1.5.0
 threadpoolctl==3.5.0
 PyOpenGL-accelerate==3.1.7 
+osmnx
+geopandas
+shapely
+SRTM.py
+pandas
+elevation
+rasterio

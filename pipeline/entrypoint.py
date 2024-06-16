@@ -15,6 +15,10 @@ if __name__ == '__main__':
         sys.argv.pop(1)
         from pipeline._decompress import main
         main()
+    if sys.argv[1] == 'create_geojson':
+        sys.argv.pop(1)
+        from pipeline._classify_tiles import main
+        main()
     elif sys.argv[1] == 'splitimgs':
         sys.argv.pop(1)
         from pipeline._splitimgs import main

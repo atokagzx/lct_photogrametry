@@ -74,7 +74,7 @@ const classColor = {
 };
 
 // load geojson data
-const dataSource = Cesium.GeoJsonDataSource.load('output_night.geojson');
+const dataSource = Cesium.GeoJsonDataSource.load('result.geojson');
 viewer.dataSources.add(dataSource);
 
 // set colorize function
