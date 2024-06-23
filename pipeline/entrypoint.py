@@ -19,24 +19,14 @@ if __name__ == '__main__':
         sys.argv.pop(1)
         from pipeline._classify_tiles import main
         main()
-    elif sys.argv[1] == 'splitimgs':
+    elif sys.argv[1] == 'rasterize':
         sys.argv.pop(1)
-        from pipeline._splitimgs import main
+        from pipeline._rasterize import main
         main()
     elif sys.argv[1] == 'tfgeojson':
         sys.argv.pop(1)
         from pipeline._transform_geojson import main
         main()
     else:
-        logger.error("Available commands: decompress, splitimgs")
+        logger.error("Available commands: decompress, create_geojson, rasterize, tfgeojson")
         sys.exit(1)
-    #     main()
-    # parser = argparse.ArgumentParser(description='Pipeline entrypoint')
-    # parser.add_argument('--input', type=str, help='Input file')
-    # parser.add_argument('--output', type=str, help='Output file')
-    # args = parser.parse_args()
-
-    # print(f'Input file: {args.input}')
-    # print(f'Output file: {args.output}')
-
-    # sys.exit(0)

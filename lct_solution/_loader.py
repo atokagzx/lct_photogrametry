@@ -135,6 +135,10 @@ class TilesLoader:
         self._origin_translation = origin_translation
         self._min_height = self.tf_to_cartesian(np.eye(4))[-1]
         self._logger.info(f"min height: {self._min_height}")
+        # compute max point
+        max_point = np.eye(4)
+        max_point[:3, 3] = [max_x, max_y, max_z]
+        self._max_point = max_point
 
 
     @staticmethod
@@ -195,6 +199,14 @@ class TilesLoader:
     @property
     def min_height(self):
         return self._min_height
+    
+
+    @property
+    def max_point(self):
+        '''
+        Represents the maximum point in the scene
+        '''
+        return self._max_point
     
 
     def get_transformed_meshes(self):

@@ -14,6 +14,8 @@ if __name__ == "__main__":
     meshes = tiles.models.values()
     scene = tm.Scene(meshes)
     scene.add_geometry(tm.creation.axis(origin_size=20))
+    max_point = tiles.max_point @ np.linalg.inv(tiles.origin_translation)
+    logging.info(f"max point:\n{max_point}")
     # for tf in tiles._tfs:
     #     scene.add_geometry(tf)
     for tile in tiles.tiles:
@@ -25,7 +27,6 @@ if __name__ == "__main__":
         tf = np.linalg.inv(tiles.origin_translation) @ np.linalg.inv(tiles.origin_rotation) @ tf
         sphere_geom = tm.creation.icosphere(radius=radius, transform=tf)
         sphere_geom.visual.face_colors = [255, 0, 0, 100]
-        print(tf)
         scene.add_geometry(sphere_geom)
         center = tf[:3, 3]
 
@@ -42,5 +43,6 @@ if __name__ == "__main__":
             corner = np.eye(4)
             corner[:3, 3] = corners[i]
             scene.add_geometry(tm.creation.axis(origin_size=1, transform=corner))
+    scene.add_geometry(tm.creation.axis(origin_size=10, transform=max_point))
             
     scene.show()

@@ -16,15 +16,15 @@ if __name__ == "__main__":
     os.makedirs(save_dir, exist_ok=True)
     tiles = lct.TilesLoader.from_tileset(root_dir, tileset_filename)
     meshes = tiles.models.values()
-    splitted = lct.split_images(tiles, 
-                                (4, 4), 
+    # count None means that the number of images will be computed based on the size of the tiles
+    for i, (rgb, depth, transform) in enumerate(lct.split_images(tiles, 
+                                count=None,
                                 camera_step=50, 
-                                image_size=1000, 
+                                image_size=1024, 
                                 to_pillow=True, 
-                                draw_axis=False)
-    for i, (rgb, depth, transform) in enumerate(splitted):
+                                draw_axis=False)):
         rgb.save(save_dir / f"rgb_{i}.png")
-        depth.save(save_dir / f"depth_{i}.png")
+        # depth.save(save_dir / f"depth_{i}.png")
         with open(save_dir / f"transform_{i}.json", "w") as f:
             json.dump(transform, f, indent=4)
     if False:

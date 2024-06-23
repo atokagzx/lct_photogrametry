@@ -4,6 +4,7 @@ import numpy as np
 import pyrender
 import PIL
 import os
+import logging
 from pathlib import Path
 import json
 import tqdm
@@ -12,7 +13,7 @@ from ._loader import TilesLoader
 
 
 def split_images(tiles: TilesLoader,
-                count: typing.Tuple[int, int], 
+                count: typing.Optional[typing.Tuple[int, int]] = None,
                 camera_step: float = 50, 
                 image_size: int = 1000,
                 light_intensity: float = 10.0,
@@ -22,7 +23,7 @@ def split_images(tiles: TilesLoader,
     '''
     Split images into count * count grid
     @param tiles: instance of TilesLoader
-    @param count: tuple of two integers, number of images in x and y axes
+    @param count: tuple of two integers, number of images in x and y axes, if None, then computed based on the size of the tiles
     @param camera_step: step of the camera (meters)
     @param image_size: size of the image (pixels)
     @param light_intensity: intensity of the light
@@ -30,7 +31,20 @@ def split_images(tiles: TilesLoader,
     @param camera_dst: distance from the camera to the origin
     @return: list of tuples (rgb, depth, transform)
     '''
-    splitted = []
+    logger = logging.getLogger("split_images")
+    if count is None:
+        min_left_point = np.eye(4)
+        max_right_point = tiles.max_point @ np.linalg.inv(tiles.origin_translation)
+        min_left_point = min_left_point[:2, 3]
+        max_right_point = max_right_point[:2, 3]
+        logger.info(f"min left point: {min_left_point}")
+        logger.info(f"max right point: {max_right_point}")
+        step = camera_step
+        x_count = int(np.ceil((max_right_point[0] - min_left_point[0]) / step))
+        y_count = int(np.ceil((max_right_point[1] - min_left_point[1]) / step))
+        count = (x_count, y_count)
+        logger.info(f"computed count: {count}")
+
     for x in tqdm.tqdm(range(count[0]), desc="Generating images in x"):
         for y in tqdm.tqdm(range(count[1]), desc="Generating images in y", leave=False):
             scene = pyrender.Scene()
@@ -69,6 +83,7 @@ def split_images(tiles: TilesLoader,
                 "step_m": camera_step,
                 "image_size": image_size,
                 "camera_dst": camera_dst,
+                "img_x_index": [x, count[0]],
+                "img_y_index": [y, count[1]]
             }
-            splitted.append((color, depth, transform))
-    return splitted
+            yield color, depth, transform
