@@ -186,24 +186,34 @@ def tileset_get_coords(path):
     with open(path) as f:
         d = json.load(f)
         childrens = d['root']["children"]
-    min_l_1 = 1e10
-    min_l_2 = 1e10
-    max_r_1 = 0
-    max_r_2 = 0
+    min_lat = 1e10
+    min_lon = 1e10
+    ecef_min_lat = None
+    ecef_max_lat = None
+    ecef_min_lon = None
+    ecef_max_lon = None
+    err_cnst_rad = 0.0011
+    max_lat = 0
+    max_lon = 0
     min_z = 0
     max_z = 0
     for child in childrens:
         child = child['boundingVolume']['sphere']
-        if (child[0] - child[3] < min_l_1) and (child[1] - child[3] < min_l_2):
-            min_l_1 = child[0] - child[3]
-            min_l_2 = child[1] - child[3]
-            min_z = child[2] - child[3]
-        if (child[0] + child[3] > max_r_1) and (child[1] + child[3] > max_r_2):
-            max_r_1 = child[0] + child[3]
-            max_r_2 = child[1] + child[3]
-            max_z = child[2] + child[3]
+        lat, lon = get_lat_lon(child[:3])
+        if (lat < min_lat):
+            min_lat = lat
+            ecef_min_lat = child
+        if (lon < min_lon):
+            min_lon = lon
+            ecef_min_lon = child
+        if (lat > max_lat):
+            max_lat = lat
+            ecef_max_lat = child
+        if (lon > max_lon):
+            max_lon = lon
+            ecef_max_lon = child
 
-    return get_lat_lon([max_r_1, min_l_2, min_z]), get_lat_lon([min_l_1, max_r_2, max_z])
+    return (min_lat - err_cnst_rad, min_lon - err_cnst_rad), (max_lat + err_cnst_rad, max_lon + err_cnst_rad)
 
 
 import pickle
