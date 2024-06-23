@@ -231,6 +231,37 @@ def process(left_corner, right_corner, output_file = "bounding_box_features_3d.g
     else:
         gdf = ox.geometries.geometries_from_bbox(north, south, east, west, tags=tags)
 
+    if 'height' not in gdf:
+        gdf["height"] = None
+    if 'man_pole' not in gdf:
+        gdf["man_made"] = None
+    if 'building' not in gdf:
+        gdf["building"] = None
+    if 'highway'  not in gdf:
+        gdf["highway"] = None      
+    if 'leisure' not in gdf:
+        gdf["leisure"] = None
+    if 'landuse' not in gdf:
+        gdf["landuse"] = None
+    if 'height' not in gdf:
+        gdf["height"] = None
+    if 'building:levels' not in gdf:
+        gdf["building:levels"] = None
+    if 'lanes' not in gdf:
+        gdf["lanes"] = None
+    if 'width' not in gdf:
+        gdf["width"] = None
+    if 'historic' not in gdf:
+        gdf["historic"] = None
+    if 'natural' not in gdf:
+        gdf["natural"] = None
+    if 'amenity' not in gdf:
+        gdf["amenity"] = None
+    if 'barrier' not in gdf:
+        gdf["barrier"] = None
+    if 'layer' not in gdf:
+        gdf["layer"] = None
+    
     gdf['width'] = gdf.apply(extract_width, axis=1)
 
     original_crs = gdf.crs
