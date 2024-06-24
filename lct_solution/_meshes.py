@@ -218,42 +218,67 @@ class PolygonSegment:
         #         max_count = count
         #         max_label = label
         # apply dbscan only for z axis
-        itersected_points = np.array(itersected_points)
-        labels = np.zeros(len(itersected_points))
-        # eps is meters, min_samples is number of points in the cluster
-        db = DBSCAN(eps=5, min_samples=2).fit(itersected_points[:, 2].reshape(-1, 1))
-        labels = db.labels_
-        unique_labels = np.unique(labels)
-        labels_mean = np.zeros(len(unique_labels))
-        for i, label in enumerate(unique_labels):
-            # compute mean height for each label
-            labels_mean[i] = np.mean(itersected_points[labels == label][:, 2])
-        mean_label = np.argmin(labels_mean)
-        # compute mean height only for the most common label
-        if len(itersected_points[labels == mean_label]) < 4:
-            self._points = []
-            return
-        mean_height = labels_mean[mean_label]
-        # code below is used to find the nearest point from raycasted points to the intersected points
-        for point in self._points:
-            nearst_idx = np.argmin([np.linalg.norm(x[:2] - point._tf[:3, 3][:2]) for x in itersected_points])
-            if nearst_idx is None:
-                continue
-            if np.linalg.norm(point._tf[:3, 3][:2] - itersected_points[nearst_idx][:2]) < 0.5:
-                tf = np.eye(4)
-                tf[:3, 3] = itersected_points[nearst_idx]
-                if labels[nearst_idx] != mean_height:
+
+        def cluster_clean(arr_raw, alpha=1.8):
+            arr = np.array(arr_raw, dtype=float)
+            a = abs(arr - arr.mean())
+            c1 = []
+            c2 = []
+            for i in range(len(arr)):
+                # print(i, round(a[i]/a.mean(), 1))
+                if abs(a[i]/a.mean()) > alpha: c2.append(arr[i])
+                else: c1.append(arr[i])
+
+            for i in range(len(arr)):
+                if abs(a[i]/a.mean()) > alpha: arr[i] = np.array(c1).mean()
+
+            return arr
+
+
+
+            itersected_points = np.array(itersected_points)
+            labels = np.zeros(len(itersected_points))
+            # eps is meters, min_samples is number of points in the cluster
+            # db = DBSCAN(eps=5, min_samples=2).fit(itersected_points[:, 2].reshape(-1, 1))
+            # labels = db.labels_
+            # unique_labels = np.unique(labels)
+            # labels_mean = np.zeros(len(unique_labels))
+            # for i, label in enumerate(unique_labels):
+            #     # compute mean height for each label
+            #     labels_mean[i] = np.mean(itersected_points[labels == label][:, 2])
+            # mean_label = np.argmin(labels_mean)
+            # # compute mean height only for the most common label
+            # if len(itersected_points[labels == mean_label]) < 4:
+            #     self._points = []
+            #     return
+            # mean_height = labels_mean[mean_label]
+            # # code below is used to find the nearest point from raycasted points to the intersected points
+
+            # use cluster_clean to filter out outliers
+            itersected_points[:, 2] = cluster_clean(itersected_points[:, 2])
+            mean_height = np.mean(itersected_points[:, 2])
+            
+
+            for point in self._points:
+                nearst_idx = np.argmin([np.linalg.norm(x[:2] - point._tf[:3, 3][:2]) for x in itersected_points])
+                if nearst_idx is None:
+                    continue
+                if np.linalg.norm(point._tf[:3, 3][:2] - itersected_points[nearst_idx][:2]) < 0.5:
+                    tf = np.eye(4)
+                    tf[:3, 3] = itersected_points[nearst_idx]
+                    if labels[nearst_idx] != mean_height:
+                        tf[:3, 3][2] = mean_height
+                    new_points.append(Point.from_tf(self._tileset, tf))
+                else:
+                    tf = np.eye(4)
+                    tf[:3, 3] = point._tf[:3, 3]
                     tf[:3, 3][2] = mean_height
-                new_points.append(Point.from_tf(self._tileset, tf))
-            else:
-                tf = np.eye(4)
-                tf[:3, 3] = point._tf[:3, 3]
-                tf[:3, 3][2] = mean_height
-                new_points.append(Point.from_tf(self._tileset, tf))
-        if len(new_points) < 4:
-            self._points = []
-            return
-        self._points = new_points
+                    new_points.append(Point.from_tf(self._tileset, tf))
+            if len(new_points) < 4:
+                self._points = []
+                return
+            self._points = new_points
+
 
 
     def as_geojson(self):
